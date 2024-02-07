@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import math
 
 # Количество генерируемых точек
-N = 10
+N = 10000
 # Уровень значимости
 ALPHA = 0.01
 # Число степеней свободы
@@ -52,11 +52,10 @@ def calc_s2(variance, n):
     return s2
 
 # Вероятность попадания в интервал  (Pi)
-# !!! должно быть a0, или a(i-1)???
 def fall_into_interval_chance(gaps, a_star, b_star):
     fall_chance = []
     for i in range(1, len(gaps)):
-        fall_chance.append((gaps[i] - gaps[0]) / (b_star - a_star))
+        fall_chance.append((gaps[i] - gaps[i-1]) / (b_star - a_star))
     return fall_chance
 
 # Вычисление теоретических частот
@@ -77,7 +76,22 @@ def check_hypotesis(x_stat, x2):
     if x2 <= x_stat:
         print("Гипотеза отвергается. Xstat = {} >= Xcrit = {}".format(x_stat, x2))
     else:
-        print("Гипотеза согласована. Xstat = {} < Xcrit = {}".format(x_stat, x2))
+        print("Гипотеза не отвергается. Xstat = {} < Xcrit = {}".format(x_stat, x2))
+
+# Вычисление коэффициента автокорреляции, tao (τ) - смещение
+# Верхняя граница n - tao должна включаться? [] или [)?
+def calc_autocor(numbers, math_expect, s2, n, tao = 1):
+    autocor = 0.0
+    for i in range(1, n - tao):
+        autocor += (numbers[i] - math_expect) * (numbers[i - tao] - math_expect)
+    autocor /= (s2 * (n - tao))
+    return autocor
+
+def check_dependency(autocor):
+    if abs(autocor) < 1:
+        print("Нет зависимости при генерации: |r(τ)| < 1 (|r(τ)| = {})".format(abs(autocor)))
+    else:
+        print("Есть зависимость при генерации: |r(τ)| >= 1 (|r(τ)| = {})".format(abs(autocor)))
 
 # если диапазон от 0 до 1 - надо сгенерировать 100 чифек и сложить в массив
 numbers = np.random.uniform(low=0.0, high=1.0, size=(N,))
@@ -109,9 +123,9 @@ for num in numbers:
             break
 print(freqs)
 
-rel_freqs = [0] * k
+rel_freqs = [0.0] * k
 for i in range(0, len(freqs)):
-    rel_freqs[i] = freqs[i] / N;
+    rel_freqs[i] = freqs[i] / N
 print(rel_freqs)
 
 mids = calc_mids(gaps, k)
@@ -123,8 +137,8 @@ print("Math expectation: ", math_expect)
 variance = calc_variance(mids, freqs, math_expect, N)
 print("Variance: ", variance)
 
-diviation = calc_diviation(variance)
-print("Diviation: ", diviation)
+deviation = calc_diviation(variance)
+print("Diviation: ", deviation)
 
 s2 = calc_s2(variance, N)
 s = math.sqrt(s2)
@@ -157,11 +171,15 @@ print("X^2: ", x_stat)
 x2 = X2[k - R - 1 - 1]
 check_hypotesis(x_stat, x2)
 
+# Используя коэффициент автокореляции, проверить касисьво генеральной совокупности на независимость
+autocor = calc_autocor(numbers, math_expect, s2, N)
+check_dependency(autocor)
+
 #create graphic
 ax = plt.gca()
-# plt.hist(rel_freqs, bins=gaps, edgecolor='black')
 plt.plot(mids, rel_freqs, marker='o', linestyle='-')
 plt.xticks(gaps)
+plt.ylim(0.0, np.max(rel_freqs))
 plt.title('График относительных частот')
 plt.xlabel('Интервалы значений выборки')
 plt.ylabel('Относительные частоты')
