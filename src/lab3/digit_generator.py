@@ -1,12 +1,16 @@
 import numpy as np
-import random
+from random import randint
 import matplotlib.pyplot as plt
 import math
 from collections import Counter
 import argparse
 import sys
 
-_N = 10000
+# Число испытаний
+_N = 1000
+
+# Размерность корзины
+_n = 30
 
 # Task
 # Из урны, в которой 20 белых и 10 черных шаров, наудачу вынимают 4 шара
@@ -37,27 +41,57 @@ def calc_theory_selection(mode, pi):
     print(theory_rep_selection)
 
 
-def get_selection(mode, pi):
+# m - размер выборки для алгоритма "без возвратов"
+def get_selection(mode, pi, m=5):
+    selection = []
 
-    if not mode:
-        selection = []
-
+    match mode:
+        case 0:        
         # Массив, хранящий суммы вероятностей (вектор накопленных вероятностей до каждой категории)
-        sum_pi = np.cumsum(pi)
-        print(sum_pi)
+            sum_pi = np.cumsum(pi)
+            print(sum_pi)
 
-        for i in range(_N):
-            # Генерация случайного числа от 0 до 1
-            rand_value = np.random.rand()
-            # Нахождение индекса категории. Чем больше вероятность, тем больше интервал
-            category = np.searchsorted(sum_pi, rand_value)
-            # Добавление категории в выборку
-            selection.append(category)
-        
-        return Counter(selection)
-    else:
-        # Выборка без возврата...
-        return
+            for i in range(_N):
+                # Генерация случайного числа от 0 до 1
+                rand_value = np.random.rand()
+                # Нахождение индекса категории. Чем больше вероятность, тем больше интервал
+                category = np.searchsorted(sum_pi, rand_value)
+                # Добавление категории в выборку
+                selection.append(category)
+            
+            return Counter(selection)
+        case 1:
+            # Статистика по белым шарам (0, 1, 2, 3, или 4 были в выборке)
+
+            # Инициализация корзины с шарами (индексация шаров)
+            basket = [None] * _n
+
+            # Проводим N экспериментов
+            for i in range(0, _N):
+                white_count = 0
+                
+                local_selection = []
+                # Индексы шаров
+                for i in range(1, _n + 1):
+                    basket[i - 1] = i
+                
+                # [n, n-1, n-2, n-3]
+                # Произвести выборку
+                for s in range(_n, _n - m, -1):
+                    index = randint(0, s - 1)
+                    print(f's: {s}, index: {index}')
+                    # Добавить шар с индексом в выборку
+                    local_selection.append(basket[index])
+                    # Исключение из выборки выбранного значения
+                    basket[index] = basket[s - 1]
+
+                for index in local_selection:
+                    if index <= 20:
+                        white_count += 1
+
+                print(white_count)
+                selection.append(white_count)
+            return Counter(selection)
 
 
 def main():
@@ -73,7 +107,7 @@ def main():
     calc_theory_selection(args.mode, pi)
 
     # Генерация выборки с повторениями с заданными вероятностями
-    selection_count = get_selection(args.mode, pi)
+    selection_count = get_selection(args.mode, pi, len(pi) - 1)
     print(selection_count)
 
 
